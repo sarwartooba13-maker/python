@@ -1,0 +1,169 @@
+import tkinter as tk
+import random
+import math
+
+WIDTH, HEIGHT = 900, 600
+
+# --- DATA HANDLING (CV Skill) ---
+QUIZ_DATA = {
+    "Mathematics": [
+        {"q": "What is the derivative of x²?", "opts": ["x", "2x", "x²", "0"], "ans": 1},
+        {"q": "Value of π (approx)?", "opts": ["3.14", "2.14", "3.0", "4.14"], "ans": 0},
+        {"q": "What is 15 x 12?", "opts": ["150", "180", "165", "195"], "ans": 1},
+    ],
+    "Physics": [
+        {"q": "Unit of Force is?", "opts": ["Joule", "Newton", "Watt", "Pascal"], "ans": 1},
+        {"q": "Speed of light is?", "opts": ["3x10^8 m/s", "3x10^6 m/s", "3x10^5 m/s", "3x10^7 m/s"], "ans": 0},
+        {"q": "Who gave E=mc²?", "opts": ["Newton", "Einstein", "Tesla", "Edison"], "ans": 1},
+    ],
+    "Computer Science": [
+        {"q": "Python is a ...", "opts": ["Compiled", "Interpreted", "Both", "None"], "ans": 1},
+        {"q": "What does OOP stand for?", "opts": ["Object Oriented Programming", "Only One Program", "Object Open Protocol", "None"], "ans": 0},
+        {"q": "Which is used for GUI in Python?", "opts": ["tkinter", "list", "tuple", "int"], "ans": 0},
+    ]
+}
+
+class SmartLearningApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Animated Smart Learning System")
+        self.canvas = tk.Canvas(root, width=WIDTH, height=HEIGHT, bg="#0f172a", highlightthickness=0)
+        self.canvas.pack()
+        
+        self.subject = None
+        self.q_index = 0
+        self.score = 0
+        self.particles = []
+        
+        self.show_welcome()
+
+    # --- ANIMATED WELCOME SCREEN ---
+    def show_welcome(self):
+        self.canvas.delete("all")
+        self.anim_y = -200
+        self.welcome_anim()
+
+    def welcome_anim(self):
+        self.canvas.delete("all")
+        # Animated background bubbles
+        for i in range(5):
+            y = self.anim_y + i*80
+            self.canvas.create_oval(100, y, 180, y+60, fill="#38bdf8", outline="", stipple="gray50")
+        
+        self.canvas.create_text(WIDTH//2, 150 + max(0, self.anim_y//2), 
+                                text="Animated Smart Learning System", 
+                                fill="white", font=("Consolas", 28, "bold"))
+        self.canvas.create_text(WIDTH//2, 220, text="Learn With Fun Animations!", fill="#94a3b8", font=("Arial", 14))
+
+        if self.anim_y < 100:
+            self.anim_y += 12
+            self.root.after(20, self.welcome_anim)
+        else:
+            # Subject buttons
+            x = 150
+            for sub in QUIZ_DATA.keys():
+                btn = self.canvas.create_rectangle(x, 300, x+180, 380, fill="#1e293b", outline="#38bdf8", width=2)
+                txt = self.canvas.create_text(x+90, 340, text=sub, fill="white", font=("Arial", 12, "bold"))
+                self.canvas.tag_bind(btn, "<Button-1>", lambda e, s=sub: self.start_quiz(s))
+                self.canvas.tag_bind(txt, "<Button-1>", lambda e, s=sub: self.start_quiz(s))
+                x += 220
+            self.canvas.create_text(WIDTH//2, 480, text="Select a Subject to Start", fill="#facc15", font=("Arial", 12))
+
+    def start_quiz(self, subject):
+        self.subject = subject
+        self.q_index = 0
+        self.score = 0
+        self.show_question()
+
+    def show_question(self):
+        self.canvas.delete("all")
+        data = QUIZ_DATA[self.subject][self.q_index]
+        
+        # Progress Tracking
+        progress = f"{self.q_index+1} / {len(QUIZ_DATA[self.subject])}"
+        self.canvas.create_rectangle(50, 30, 850, 50, fill="#1e293b", outline="")
+        fill_w = 50 + (self.q_index / len(QUIZ_DATA[self.subject])) * 800
+        self.canvas.create_rectangle(50, 30, fill_w, 50, fill="#22c55e", outline="")
+        self.canvas.create_text(WIDTH//2, 20, text=f"{self.subject} - {progress} - Score: {self.score}", fill="white", font=("Arial", 12, "bold"))
+
+        # Question
+        self.canvas.create_text(WIDTH//2, 120, text=data["q"], fill="white", font=("Arial", 18, "bold"), width=700)
+
+        # Options with animation binding
+        y = 180
+        for i, opt in enumerate(data["opts"]):
+            r = self.canvas.create_rectangle(150, y, 750, y+60, fill="#1e293b", outline="#475569", width=2, tags=f"opt{i}")
+            t = self.canvas.create_text(180, y+30, anchor="w", text=f"{chr(65+i)}. {opt}", fill="white", font=("Arial", 14), tags=f"opt{i}")
+            self.canvas.tag_bind(f"opt{i}", "<Button-1>", lambda e, idx=i: self.check_answer(idx))
+            # Hover effect
+            self.canvas.tag_bind(f"opt{i}", "<Enter>", lambda e, idx=i: self.canvas.itemconfig(f"opt{idx}", fill="#334155"))
+            self.canvas.tag_bind(f"opt{i}", "<Leave>", lambda e, idx=i: self.canvas.itemconfig(f"opt{idx}", fill="#1e293b"))
+            y += 80
+
+    def check_answer(self, selected):
+        correct = QUIZ_DATA[self.subject][self.q_index]["ans"]
+        if selected == correct:
+            self.score += 1
+            self.correct_anim(selected)
+        else:
+            self.wrong_anim(selected, correct)
+
+    # --- ANIMATIONS ON CORRECT / INCORRECT ---
+    def correct_anim(self, idx):
+        self.canvas.itemconfig(f"opt{idx}", fill="#16a34a")
+        self.create_confetti()
+        self.root.after(800, self.next_q)
+
+    def wrong_anim(self, sel, cor):
+        # Shake animation
+        self.canvas.itemconfig(f"opt{sel}", fill="#dc2626")
+        self.canvas.itemconfig(f"opt{cor}", fill="#16a34a")
+        for _ in range(6):
+            self.canvas.move(f"opt{sel}", 5, 0)
+            self.root.update()
+            self.root.after(30)
+            self.canvas.move(f"opt{sel}", -5, 0)
+            self.root.update()
+            self.root.after(30)
+        self.root.after(600, self.next_q)
+
+    def create_confetti(self):
+        for _ in range(20):
+            x = random.randint(0, WIDTH)
+            y = random.randint(0, 100)
+            c = random.choice(["#facc15", "#38bdf8", "#f472b6", "#4ade80"])
+            p = self.canvas.create_oval(x, y, x+8, y+8, fill=c, outline="")
+            self.particles.append(p)
+
+    def next_q(self):
+        self.q_index += 1
+        if self.q_index < len(QUIZ_DATA[self.subject]):
+            self.show_question()
+        else:
+            self.show_result()
+
+    # --- ANIMATED RESULTS SCREEN ---
+    def show_result(self):
+        self.canvas.delete("all")
+        percent = int((self.score / len(QUIZ_DATA[self.subject])) * 100)
+        
+        self.canvas.create_text(WIDTH//2, 150, text="Quiz Completed!", fill="white", font=("Consolas", 32, "bold"))
+        self.canvas.create_text(WIDTH//2, 220, text=f"Your Score: {self.score} / {len(QUIZ_DATA[self.subject])}", fill="#facc15", font=("Arial", 20, "bold"))
+        
+        # Animated Circle
+        color = "#22c55e" if percent >= 60 else "#ef4444"
+        self.canvas.create_oval(WIDTH//2-80, 270, WIDTH//2+80, 430, outline=color, width=8)
+        self.canvas.create_text(WIDTH//2, 350, text=f"{percent}%", fill=color, font=("Arial", 36, "bold"))
+        
+        msg = "Excellent Work! Keep Learning!" if percent >= 60 else "Keep Practicing! You Can Do Better!"
+        self.canvas.create_text(WIDTH//2, 470, text=msg, fill="white", font=("Arial", 14))
+
+        btn = self.canvas.create_rectangle(WIDTH//2-90, 500, WIDTH//2+90, 540, fill="#38bdf8", outline="")
+        txt = self.canvas.create_text(WIDTH//2, 520, text="Back to Home", fill="black", font=("Arial", 12, "bold"))
+        self.canvas.tag_bind(btn, "<Button-1>", lambda e: self.show_welcome())
+        self.canvas.tag_bind(txt, "<Button-1>", lambda e: self.show_welcome())
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = SmartLearningApp(root)
+    root.mainloop()
